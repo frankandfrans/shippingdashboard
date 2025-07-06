@@ -5,7 +5,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 
 # Set your USPS Web Tools User ID here
-USPS_USER_ID = "52148930"
+USPS_USER_ID = "8N9FRANK65321"
 
 # USPS Tracking API request function
 def get_usps_status(tracking_number):
