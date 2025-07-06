@@ -1,0 +1,69 @@
+import requests
+import pandas as pd
+import streamlit as st
+import time
+import xml.etree.ElementTree as ET
+
+# USPS API configuration
+USPS_USER_ID = "YOUR_USPS_USER_ID"  # Replace with your USPS Web Tools User ID
+
+# Function to track a package via USPS API
+def track_usps(tracking_number):
+    url = "https://secure.shippingapis.com/ShippingAPI.dll"
+    params = {
+        "API": "TrackV2",
+        "XML": f"""
+        <TrackRequest USERID=\"{52148930}\">
+            <TrackID ID=\"{tracking_number}\"></TrackID>
+        </TrackRequest>
+        """
+    }
+
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        try:
+            root = ET.fromstring(response.text)
+            status = root.find(".//TrackSummary").text
+            if "Delivered" in status:
+                return "Delivered"
+            elif "Exception" in status or "Alert" in status:
+                return "Exception"
+            else:
+                return "In Progress"
+        except Exception:
+            return "Unknown"
+    else:
+        return "Error"
+
+# Streamlit app setup
+st.title("USPS Shipping Dashboard")
+uploaded_file = st.file_uploader("Upload your shipment CSV", type="csv")
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.write("### Raw Data", df)
+
+    if st.button("Lookup Delivery Status"):
+        status_list = []
+        with st.spinner("Fetching delivery statuses..."):
+            for tracking_no in df["TRACKING NO"]:
+                status = track_usps(str(tracking_no))
+                status_list.append(status)
+                time.sleep(0.5)  # To avoid hitting rate limits
+
+        df["DELIVERY STATUS"] = status_list
+
+        # Color mapping
+        color_mapping = {"Delivered": "🟢 Delivered", "In Progress": "🟡 In Progress", "Exception": "🔴 Exception", "Unknown": "⚪ Unknown", "Error": "⚫ Error"}
+        df["STATUS ICON"] = df["DELIVERY STATUS"].map(color_mapping)
+
+        st.write("### Updated Dashboard", df[["ORDER ID", "TRACKING NO", "SHIPPING FULL NAME", "DELIVERY STATUS", "STATUS ICON"]])
+
+        # Visual chart
+        status_counts = df["DELIVERY STATUS"].value_counts()
+        st.write("### Delivery Status Summary")
+        st.bar_chart(status_counts)
+
+        st.success("Dashboard updated!")
+
+st.info("Note: You need a valid USPS Web Tools User ID for tracking to work.")
