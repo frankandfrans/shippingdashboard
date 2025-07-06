@@ -9,7 +9,7 @@ USPS_USER_ID = "52148930"
 
 # USPS Tracking API request function
 def get_usps_status(tracking_number):
-    url = "http://production.shippingapis.com/ShippingAPI.dll"
+    url = "https://secure.shippingapis.com/ShippingAPI.dll"
     api = "TrackV2"
     xml = f"""<TrackRequest USERID="{USPS_USER_ID}"><TrackID ID="{tracking_number}"></TrackID></TrackRequest>"""
     params = {"API": api, "XML": xml}
